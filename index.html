@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Sushi Calorie Tracker</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --accent: #ff5252;
+      --gold: #d4af37;
+      --text: #ffffff;
+      --subtext: #a0a0a0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
+    body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* HEADER CONTATORE */
+    header {
+      background: #1a1a1a;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      border-bottom: 1px solid #2a2a2a;
+      z-index: 10;
+    }
+    .counter-block h2 { font-size: 24px; color: var(--accent); margin-bottom: 2px; }
+    .counter-block span { font-size: 12px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* PIATTO CENTRALE (DROP ZONE) */
+    #drop-zone-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 10px;
+    }
+    #plate {
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #2d2d2d 0%, #1a1a1a 100%);
+      border: 6px solid var(--gold);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6), inset 0 2px 8px rgba(0,0,0,0.8);
+      display: flex;
+      flex-wrap: wrap;
+      align-content: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 18px;
+      transition: transform 0.2s, border-color 0.2s;
+      overflow-y: auto;
+    }
+    #plate.drag-over { transform: scale(1.05); border-color: #00e676; }
+    .plate-placeholder { color: var(--subtext); font-size: 13px; text-align: center; }
+
+    .eaten-badge {
+      background: #333;
+      border: 1px solid #444;
+      border-radius: 20px;
+      padding: 4px 8px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    /* FILTRI CATEGORIA */
+    #categories {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 8px 12px;
+      white-space: nowrap;
+      scrollbar-width: none;
+    }
+    .chip {
+      background: var(--card-bg);
+      border: 1px solid #333;
+      color: var(--subtext);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    /* NASTRO SUSHI */
+    #conveyor-belt {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 12px;
+      background: #181818;
+      border-top: 1px solid #2a2a2a;
+      scrollbar-width: none;
+    }
+    .sushi-card {
+      min-width: 135px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 10px;
+      border: 1px solid #2c2c2c;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      touch-action: none;
+    }
+    .sushi-name { font-size: 13px; font-weight: bold; margin-bottom: 2px; text-align: center; }
+    .sushi-kcal { font-size: 11px; color: var(--subtext); margin-bottom: 8px; }
+    .sushi-icon { font-size: 32px; margin: 4px 0; cursor: grab; }
+
+    /* CONTROLLI QUANTITÀ */
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+    }
+    .qty-btn {
+      background: #2a2a2a;
+      border: none;
+      color: white;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .quick-pill-container { display: flex; gap: 4px; margin-top: 4px; }
+    .pill {
+      background: #282828;
+      border: 1px solid #3a3a3a;
+      color: #bbb;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    /* BOTTONE AGGIUNGI */
+    .btn-add {
+      background: var(--accent);
+      border: none;
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 6px 12px;
+      border-radius: 6px;
+      margin-top: 6px;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    /* TOAST ANNULLA */
+    #toast {
+      position: absolute;
+      bottom: 200px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #222;
+      border: 1px solid #444;
+      padding: 10px 16px;
+      border-radius: 20px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      z-index: 99;
+    }
+    #toast button { background: none; border: none; color: var(--gold); font-weight: bold; cursor: pointer; }
+
+    /* ELEMENTO TRASCINATO (GHOST) */
+    .drag-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.85;
+      font-size: 36px;
+      transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER CON CONTATORE CALORIE E PEZZI -->
+  <header>
+    <div class="counter-block">
+      <span id="total-pieces">0 pz</span>
+      <h2 id="total-calories">0 kcal</h2>
+    </div>
+    <div style="font-size: 12px; color: var(--gold); text-align: right;">
+      <span>🍣 AYCE Tracker</span>
+    </div>
+  </header>
+
+  <!-- PIATTO DRAGGABILE / DROP ZONE -->
+  <div id="drop-zone-container">
+    <div id="plate">
+      <div class="plate-placeholder" id="plate-empty-msg">Trascina qui o premi "Aggiungi"</div>
+    </div>
+  </div>
+
+  <!-- TOAST ANNULLA -->
+  <div id="toast">
+    <span id="toast-msg">Aggiunto</span>
+    <button onclick="undoLast()">ANNULLA</button>
+  </div>
+
+  <!-- FILTRI CATEGORIA -->
+  <div id="categories"></div>
+
+  <!-- CARRELLO / NASTRO SUSHI -->
+  <div id="conveyor-belt"></div>
+
+  <script>
+    // DATASET DAL TUO STORICO
+    const sushiData = [
+      { id: "1", name: "Nigiri Mix", category: "Nigiri", calories: 50, icon: "🍣" },
+      { id: "2", name: "Sashimi Salmone", category: "Sashimi", calories: 36, icon: "🐟" },
+      { id: "3", name: "Sashimi Tonno", category: "Sashimi", calories: 22, icon: "🐟" },
+      { id: "4", name: "Sashimi Branzino", category: "Sashimi", calories: 19, icon: "🐟" },
+      { id: "5", name: "Uramaki Roll", category: "Uramaki", calories: 52, icon: "🍙" },
+      { id: "6", name: "Hosomaki", category: "Hosomaki", calories: 25, icon: "🍱" },
+      { id: "7", name: "Tartare Salmone", category: "Tartare", calories: 155, icon: "🥣" },
+      { id: "8", name: "Carpaccio Misto", category: "Carpaccio", calories: 14, icon: "🥢" },
+      { id: "9", name: "Gambero Rosso", category: "Carpaccio", calories: 13, icon: "🦐" },
+      { id: "10", name: "Edamame", category: "Antipasti", calories: 60, icon: "🫛" },
+      { id: "11", name: "Bao Dolce", category: "Dolci", calories: 115, icon: "🥟" }
+    ];
+
+    let eaten = [];
+    let lastAction = null;
+    let selectedCat = "Tutti";
+    let quantities = {};
+
+    // INIZIALIZZA CATEGORIE
+    const categories = ["Tutti", ...new Set(sushiData.map(s => s.category))];
+    const catContainer = document.getElementById("categories");
+    categories.forEach(cat => {
+      const chip = document.createElement("div");
+      chip.className = `chip ${cat === selectedCat ? 'active' : ''}`;
+      chip.textContent = cat;
+      chip.onclick = () => {
+        selectedCat = cat;
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        renderBelt();
+      };
+      catContainer.appendChild(chip);
+    });
+
+    // RENDER DEL NASTRO SUSHI
+    function renderBelt() {
+      const belt = document.getElementById("conveyor-belt");
+      belt.innerHTML = "";
+      const filtered = selectedCat === "Tutti" ? sushiData : sushiData.filter(s => s.category === selectedCat);
+
+      filtered.forEach(s => {
+        if (!quantities[s.id]) quantities[s.id] = 1;
+
+        const card = document.createElement("div");
+        card.className = "sushi-card";
+
+        card.innerHTML = `
+          <div class="sushi-name">${s.name}</div>
+          <div class="sushi-kcal">${s.calories} kcal / pz</div>
+          <div class="sushi-icon" id="drag-${s.id}">${s.icon}</div>
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="updateQty('${s.id}', -1)">-</button>
+            <span id="qty-${s.id}" style="font-weight:bold; font-size:13px">${quantities[s.id]}</span>
+            <button class="qty-btn" onclick="updateQty('${s.id}', 1)">+</button>
+          </div>
+          <div class="quick-pill-container">
+            <div class="pill" onclick="setQty('${s.id}', 1)">1</div>
+            <div class="pill" onclick="setQty('${s.id}', 4)">4</div>
+            <div class="pill" onclick="setQty('${s.id}', 8)">8</div>
+          </div>
+          <button class="btn-add" onclick="addSushi('${s.id}')">Aggiungi</button>
+        `;
+
+        // AGGANCIA DRAG & DROP TOUCH
+        attachTouchDrag(card.querySelector('.sushi-icon'), s);
+        belt.appendChild(card);
+      });
+    }
+
+    function updateQty(id, delta) {
+      quantities[id] = Math.max(1, (quantities[id] || 1) + delta);
+      document.getElementById(`qty-${id}`).innerText = quantities[id];
+    }
+    function setQty(id, val) {
+      quantities[id] = val;
+      document.getElementById(`qty-${id}`).innerText = val;
+    }
+
+    // AGGIUNTA NEL PIATTO E CALCOLO CALORIE
+    function addSushi(id, customQty = null) {
+      const item = sushiData.find(s => s.id === id);
+      const qty = customQty || quantities[id] || 1;
+      const existing = eaten.find(e => e.item.id === id);
+
+      if (existing) {
+        existing.count += qty;
+      } else {
+        eaten.push({ item: item, count: qty });
+      }
+
+      lastAction = { id: id, qty: qty };
+      showToast(`+${qty}x ${item.name} (${item.calories * qty} kcal)`);
+      renderPlate();
+      quantities[id] = 1;
+      const el = document.getElementById(`qty-${id}`);
+      if(el) el.innerText = "1";
+    }
+
+    // GESTIONE PIATTO E ELIMINAZIONE ERRORI
+    function renderPlate() {
+      const plate = document.getElementById("plate");
+      const emptyMsg = document.getElementById("plate-empty-msg");
+      plate.innerHTML = "";
+
+      let totalKcal = 0;
+      let totalPieces = 0;
+
+      if (eaten.length === 0) {
+        plate.appendChild(emptyMsg);
+        emptyMsg.style.display = "block";
+      } else {
+        emptyMsg.style.display = "none";
+        eaten.forEach(e => {
+          totalKcal += e.item.calories * e.count;
+          totalPieces += e.count;
+
+          const badge = document.createElement("div");
+          badge.className = "eaten-badge";
+          badge.innerHTML = `${e.item.icon} x${e.count} <span style="color:#ff5252; margin-left:4px">✕</span>`;
+          // Tocca il badge per rimuovere 1 pezzo (o eliminarlo se a 0)
+          badge.onclick = () => removeOne(e.item.id);
+          plate.appendChild(badge);
+        });
+      }
+
+      document.getElementById("total-calories").innerText = `${totalKcal} kcal`;
+      document.getElementById("total-pieces").innerText = `${totalPieces} pz`;
+    }
+
+    function removeOne(id) {
+      const index = eaten.findIndex(e => e.item.id === id);
+      if (index !== -1) {
+        if (eaten[index].count > 1) {
+          eaten[index].count--;
+        } else {
+          eaten.splice(index, 1);
+        }
+        renderPlate();
+      }
+    }
+
+    function undoLast() {
+      if (!lastAction) return;
+      const index = eaten.findIndex(e => e.item.id === lastAction.id);
+      if (index !== -1) {
+        if (eaten[index].count > lastAction.qty) {
+          eaten[index].count -= lastAction.qty;
+        } else {
+          eaten.splice(index, 1);
+        }
+        renderPlate();
+      }
+      document.getElementById("toast").style.display = "none";
+      lastAction = null;
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-msg").innerText = msg;
+      toast.style.display = "flex";
+      setTimeout(() => { toast.style.display = "none"; }, 3500);
+    }
+
+    // TOUCH DRAG & DROP IMPLEMENTATION
+    function attachTouchDrag(el, sushi) {
+      let ghost = null;
+      const plate = document.getElementById("plate");
+
+      el.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        ghost = document.createElement('div');
+        ghost.className = 'drag-ghost';
+        ghost.innerHTML = `${sushi.icon} <span style="font-size:14px; color:#fff; background:red; border-radius:10px; padding:2px 6px;">x${quantities[sushi.id]}</span>`;
+        document.body.appendChild(ghost);
+        moveGhost(touch.clientX, touch.clientY);
+      }, { passive: false });
+
+      el.addEventListener('touchmove', (e) => {
+        if (!ghost) return;
+        const touch = e.touches[0];
+        moveGhost(touch.clientX, touch.clientY);
+
+        const rect = plate.getBoundingClientRect();
+        if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+            touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+          plate.classList.add('drag-over');
