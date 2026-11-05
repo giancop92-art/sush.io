@@ -43,11 +43,11 @@
       padding: 10px;
     }
     #plate {
-      width: 260px;
-      height: 260px;
+      width: 250px;
+      height: 250px;
       border-radius: 50%;
       background: radial-gradient(circle, #2d2d2d 0%, #1a1a1a 100%);
-      border: 6px solid var(--gold);
+      border: 5px solid var(--gold);
       box-shadow: 0 10px 25px rgba(0,0,0,0.6), inset 0 2px 8px rgba(0,0,0,0.8);
       display: flex;
       flex-wrap: wrap;
@@ -58,18 +58,18 @@
       transition: transform 0.2s, border-color 0.2s;
       overflow-y: auto;
     }
-    #plate.drag-over { transform: scale(1.05); border-color: #00e676; }
-    .plate-placeholder { color: var(--subtext); font-size: 13px; text-align: center; }
+    #plate.drag-over { transform: scale(1.06); border-color: #00e676; }
+    .plate-placeholder { color: var(--subtext); font-size: 12px; text-align: center; line-height: 1.4; }
 
     .eaten-badge {
-      background: #333;
+      background: #2a2a2a;
       border: 1px solid #444;
       border-radius: 20px;
-      padding: 4px 8px;
+      padding: 5px 10px;
       font-size: 12px;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       cursor: pointer;
     }
 
@@ -104,7 +104,7 @@
       scrollbar-width: none;
     }
     .sushi-card {
-      min-width: 135px;
+      min-width: 130px;
       background: var(--card-bg);
       border-radius: 12px;
       padding: 10px;
@@ -114,8 +114,8 @@
       align-items: center;
       touch-action: none;
     }
-    .sushi-name { font-size: 13px; font-weight: bold; margin-bottom: 2px; text-align: center; }
-    .sushi-kcal { font-size: 11px; color: var(--subtext); margin-bottom: 8px; }
+    .sushi-name { font-size: 12px; font-weight: bold; margin-bottom: 2px; text-align: center; }
+    .sushi-kcal { font-size: 11px; color: var(--subtext); margin-bottom: 6px; }
     .sushi-icon { font-size: 32px; margin: 4px 0; cursor: grab; }
 
     /* CONTROLLI QUANTITÀ */
@@ -123,14 +123,14 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      margin: 6px 0;
+      margin: 4px 0;
     }
     .qty-btn {
       background: #2a2a2a;
       border: none;
       color: white;
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       font-weight: bold;
       font-size: 14px;
@@ -153,7 +153,7 @@
       color: white;
       font-size: 11px;
       font-weight: bold;
-      padding: 6px 12px;
+      padding: 6px 10px;
       border-radius: 6px;
       margin-top: 6px;
       width: 100%;
@@ -163,7 +163,7 @@
     /* TOAST ANNULLA */
     #toast {
       position: absolute;
-      bottom: 200px;
+      bottom: 190px;
       left: 50%;
       transform: translateX(-50%);
       background: #222;
@@ -179,23 +179,25 @@
     }
     #toast button { background: none; border: none; color: var(--gold); font-weight: bold; cursor: pointer; }
 
-    /* ELEMENTO TRASCINATO (GHOST) */
+    /* ELEMENTO TRASCINATO SOTTO IL DITO */
     .drag-ghost {
       position: fixed;
       pointer-events: none;
       z-index: 1000;
       opacity: 0.85;
-      font-size: 36px;
       transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
   </style>
 </head>
 <body>
 
-  <!-- HEADER CON CONTATORE CALORIE E PEZZI -->
+  <!-- CONTATORE LIVE STICKY IN ALTO -->
   <header>
     <div class="counter-block">
-      <span id="total-pieces">0 pz</span>
+      <span id="total-pieces">0 pz totali</span>
       <h2 id="total-calories">0 kcal</h2>
     </div>
     <div style="font-size: 12px; color: var(--gold); text-align: right;">
@@ -203,27 +205,27 @@
     </div>
   </header>
 
-  <!-- PIATTO DRAGGABILE / DROP ZONE -->
+  <!-- IL PIATTO (DROP TARGET) -->
   <div id="drop-zone-container">
     <div id="plate">
-      <div class="plate-placeholder" id="plate-empty-msg">Trascina qui o premi "Aggiungi"</div>
+      <div class="plate-placeholder" id="plate-empty-msg">Trascina qui il sushi<br>o tocca "Aggiungi"</div>
     </div>
   </div>
 
-  <!-- TOAST ANNULLA -->
+  <!-- NOTIFICA CON TASTO ANNULLA -->
   <div id="toast">
     <span id="toast-msg">Aggiunto</span>
     <button onclick="undoLast()">ANNULLA</button>
   </div>
 
-  <!-- FILTRI CATEGORIA -->
+  <!-- FILTRI PER CATEGORIA -->
   <div id="categories"></div>
 
-  <!-- CARRELLO / NASTRO SUSHI -->
+  <!-- CARRELLO SUSHI SCORREVOLE -->
   <div id="conveyor-belt"></div>
 
   <script>
-    // DATASET DAL TUO STORICO
+    // LISTA CIBI CON CALORIE CALCOLATE DAL TUO DATABASE
     const sushiData = [
       { id: "1", name: "Nigiri Mix", category: "Nigiri", calories: 50, icon: "🍣" },
       { id: "2", name: "Sashimi Salmone", category: "Sashimi", calories: 36, icon: "🐟" },
@@ -243,7 +245,7 @@
     let selectedCat = "Tutti";
     let quantities = {};
 
-    // INIZIALIZZA CATEGORIE
+    // INIZIALIZZAZIONE FILTRI CATEGORIE
     const categories = ["Tutti", ...new Set(sushiData.map(s => s.category))];
     const catContainer = document.getElementById("categories");
     categories.forEach(cat => {
@@ -259,7 +261,7 @@
       catContainer.appendChild(chip);
     });
 
-    // RENDER DEL NASTRO SUSHI
+    // COSTRUZIONE DEL NASTRO
     function renderBelt() {
       const belt = document.getElementById("conveyor-belt");
       belt.innerHTML = "";
@@ -273,7 +275,7 @@
 
         card.innerHTML = `
           <div class="sushi-name">${s.name}</div>
-          <div class="sushi-kcal">${s.calories} kcal / pz</div>
+          <div class="sushi-kcal">${s.calories} kcal/pz</div>
           <div class="sushi-icon" id="drag-${s.id}">${s.icon}</div>
           <div class="qty-controls">
             <button class="qty-btn" onclick="updateQty('${s.id}', -1)">-</button>
@@ -288,7 +290,6 @@
           <button class="btn-add" onclick="addSushi('${s.id}')">Aggiungi</button>
         `;
 
-        // AGGANCIA DRAG & DROP TOUCH
         attachTouchDrag(card.querySelector('.sushi-icon'), s);
         belt.appendChild(card);
       });
@@ -320,10 +321,10 @@
       renderPlate();
       quantities[id] = 1;
       const el = document.getElementById(`qty-${id}`);
-      if(el) el.innerText = "1";
+      if (el) el.innerText = "1";
     }
 
-    // GESTIONE PIATTO E ELIMINAZIONE ERRORI
+    // VISUALIZZAZIONE DEL PIATTO
     function renderPlate() {
       const plate = document.getElementById("plate");
       const emptyMsg = document.getElementById("plate-empty-msg");
@@ -344,14 +345,14 @@
           const badge = document.createElement("div");
           badge.className = "eaten-badge";
           badge.innerHTML = `${e.item.icon} x${e.count} <span style="color:#ff5252; margin-left:4px">✕</span>`;
-          // Tocca il badge per rimuovere 1 pezzo (o eliminarlo se a 0)
+          // Toccando il badge nel piatto elimini 1 pezzo alla volta
           badge.onclick = () => removeOne(e.item.id);
           plate.appendChild(badge);
         });
       }
 
       document.getElementById("total-calories").innerText = `${totalKcal} kcal`;
-      document.getElementById("total-pieces").innerText = `${totalPieces} pz`;
+      document.getElementById("total-pieces").innerText = `${totalPieces} pz totali`;
     }
 
     function removeOne(id) {
@@ -388,22 +389,29 @@
       setTimeout(() => { toast.style.display = "none"; }, 3500);
     }
 
-    // TOUCH DRAG & DROP IMPLEMENTATION
+    // LOGICA DI DRAG & DROP TOUCH PER SMARTPHONE
     function attachTouchDrag(el, sushi) {
       let ghost = null;
       const plate = document.getElementById("plate");
+
+      function moveGhost(x, y) {
+        if (!ghost) return;
+        ghost.style.left = x + 'px';
+        ghost.style.top = y + 'px';
+      }
 
       el.addEventListener('touchstart', (e) => {
         const touch = e.touches[0];
         ghost = document.createElement('div');
         ghost.className = 'drag-ghost';
-        ghost.innerHTML = `${sushi.icon} <span style="font-size:14px; color:#fff; background:red; border-radius:10px; padding:2px 6px;">x${quantities[sushi.id]}</span>`;
+        ghost.innerHTML = `<span style="font-size:36px">${sushi.icon}</span><span style="font-size:12px; background:red; color:#fff; border-radius:10px; padding:2px 6px; font-weight:bold;">x${quantities[sushi.id]}</span>`;
         document.body.appendChild(ghost);
         moveGhost(touch.clientX, touch.clientY);
       }, { passive: false });
 
       el.addEventListener('touchmove', (e) => {
         if (!ghost) return;
+        e.preventDefault(); // Impedisce lo scroll della pagina mentre trascini
         const touch = e.touches[0];
         moveGhost(touch.clientX, touch.clientY);
 
@@ -411,3 +419,30 @@
         if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
             touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
           plate.classList.add('drag-over');
+        } else {
+          plate.classList.remove('drag-over');
+        }
+      }, { passive: false });
+
+      el.addEventListener('touchend', (e) => {
+        if (!ghost) return;
+        const touch = e.changedTouches[0];
+        const rect = plate.getBoundingClientRect();
+
+        // Se rilasciato all'interno del piatto
+        if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+            touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+          addSushi(sushi.id);
+        }
+        plate.classList.remove('drag-over');
+        ghost.remove();
+        ghost = null;
+      });
+    }
+
+    // AVVIO
+    renderBelt();
+    renderPlate();
+  </script>
+</body>
+</html>
